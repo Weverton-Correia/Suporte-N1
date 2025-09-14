@@ -5,17 +5,23 @@
 
 # Criar diretório de logs
 $logDir = "C:\SuporteN1_Logs"
-if (-not (Test-Path $logDir)) { New-Item -Path $logDir -ItemType Directory }
+if (-not (Test-Path $logDir)) { New-Item -Path $logDir -ItemType Directory | Out-Null }
+
+# Log único por sessão
+$global:logFile = "$logDir\Log_SuporteN1_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
 
 function Write-Log {
-    param (
-        [string]$mensagem,
-        [string]$arquivo="$logDir\Log_Geral_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    )
+    param ([string]$mensagem)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $linha = "$timestamp - $mensagem"
     Write-Host $linha
-    Add-Content -Path $arquivo -Value $linha
+    Add-Content -Path $global:logFile -Value $linha
+}
+
+# Verificação de execução como Administrador
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Host "⚠️ Este script precisa ser executado como Administrador."
+    exit
 }
 
 function Limpar-Temporarios {
@@ -48,14 +54,14 @@ function Verificar-IntegridadeWindows {
     $relatorio = sfc /scannow 2>&1
     $arquivo = "$logDir\Verificacao_Integridade_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
     $relatorio | Out-File $arquivo
-    Write-Log "Verificação de integridade concluída. Relatório salvo em $arquivo"
+    Write-Log "Verificação concluída. Relatório salvo em $arquivo"
 }
 
 function Testar-ConexaoRede {
     Write-Log "Iniciando teste de conexão de rede..."
-    $resultado = Test-Connection google.com -Count 4
     $arquivo = "$logDir\Teste_Rede_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    $resultado | Out-File $arquivo
+    Test-Connection google.com -Count 4 | Out-File $arquivo
+    Get-NetIPConfiguration | Out-File $arquivo -Append
     Write-Log "Teste de rede concluído. Relatório salvo em $arquivo"
 }
 
@@ -68,7 +74,7 @@ function Atualizar-Windows {
     $relatorio = Get-WindowsUpdate -Install -AcceptAll -IgnoreReboot
     $arquivo = "$logDir\Atualizacao_Windows_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
     $relatorio | Out-File $arquivo
-    Write-Log "Atualização do Windows concluída. Relatório salvo em $arquivo"
+    Write-Log "Atualização concluída. Relatório salvo em $arquivo"
 }
 
 function Reiniciar-Maquina {
@@ -79,10 +85,11 @@ function Reiniciar-Maquina {
 function Relatorio-HardwareSoftware {
     Write-Log "Gerando relatório de hardware e software..."
     $relatorio = Get-ComputerInfo | Select-Object CsName, WindowsVersion, OsArchitecture, CsTotalPhysicalMemory
-    $relatorio += Get-WmiObject Win32_Product | Select-Object Name, Version
+    $softwares = Get-Package | Select-Object Name, Version, ProviderName
     $arquivo = "$logDir\Relatorio_HW_SW_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
     $relatorio | Out-File $arquivo
-    Write-Log "Relatório de hardware e software salvo em $arquivo"
+    $softwares | Out-File $arquivo -Append
+    Write-Log "Relatório salvo em $arquivo"
 }
 
 function Reset-Rede {
@@ -95,30 +102,32 @@ function Reset-Rede {
 
 function Backup-DocumentosDesktop {
     $destino = "C:\Backup_Rapido"
-    Write-Log "Iniciando backup de Documentos e Desktop em $destino..."
+    Write-Log "Iniciando backup compactado de Documentos e Desktop..."
     New-Item -Path $destino -ItemType Directory -Force | Out-Null
-    Copy-Item "$env:USERPROFILE\Documents\*" -Destination "$destino\Documents" -Recurse -Force -ErrorAction SilentlyContinue
-    Copy-Item "$env:USERPROFILE\Desktop\*" -Destination "$destino\Desktop" -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Log "Backup concluído."
+    $zipFile = "$destino\Backup_$(Get-Date -Format yyyyMMdd_HHmmss).zip"
+    Compress-Archive -Path "$env:USERPROFILE\Documents","$env:USERPROFILE\Desktop" -DestinationPath $zipFile -Force
+    Write-Log "Backup concluído em $zipFile"
 }
 
 function Verificar-ServicosEssenciais {
     Write-Log "Verificando serviços essenciais..."
     $servicos = @("wuauserv","Spooler","MpsSvc")
-    $arquivo = "$logDir\Servicos_Essenciais_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    foreach ($s in $servicos) {
-        $status = Get-Service $s
-        $linha = "$($status.DisplayName) - Status: $($status.Status)"
-        Write-Host $linha
-        Add-Content -Path $arquivo -Value $linha
-    }
-    Write-Log "Verificação de serviços essenciais concluída. Relatório salvo em $arquivo"
+    $arquivo = "$logDir\Servicos_Essenciais_$(Get-Date -Format yyyyMMdd_HHmmss).csv"
+    Get-Service $servicos | Select-Object DisplayName, Status | Export-Csv $arquivo -NoTypeInformation -Encoding UTF8
+    Write-Log "Relatório salvo em $arquivo"
 }
 
 function Scan-WindowsDefender {
     Write-Log "Iniciando scan rápido do Windows Defender..."
     Start-MpScan -ScanType QuickScan
-    Write-Log "Scan do Windows Defender concluído."
+    Write-Log "Scan concluído."
+}
+
+function Processos-Pesados {
+    Write-Log "Gerando inventário de processos que mais consomem CPU..."
+    $arquivo = "$logDir\Processos_Pesados_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
+    Get-Process | Sort-Object CPU -Descending | Select -First 15 | Out-File $arquivo
+    Write-Log "Inventário salvo em $arquivo"
 }
 
 # Menu principal
@@ -134,15 +143,16 @@ function Menu-N1 {
     Write-Host "5. Testar conexão de rede"
     Write-Host "6. Atualizar Windows"
     Write-Host "7. Reiniciar máquina"
-    Write-Host "8. Gerar relatório de hardware e software"
+    Write-Host "8. Relatório de hardware e software"
     Write-Host "9. Resetar rede"
-    Write-Host "10. Backup rápido de Documentos e Desktop"
+    Write-Host "10. Backup rápido (zip) de Documentos e Desktop"
     Write-Host "11. Verificar serviços essenciais"
     Write-Host "12. Scan rápido Windows Defender"
-    Write-Host "13. Sair"
+    Write-Host "13. Inventário de processos pesados"
+    Write-Host "14. Sair"
     Write-Host "========================================="
 
-    $escolha = Read-Host "Escolha uma opção (1-13)"
+    $escolha = Read-Host "Escolha uma opção (1-14)"
 
     switch ($escolha) {
         "1" { Limpar-Temporarios }
@@ -157,7 +167,8 @@ function Menu-N1 {
         "10" { Backup-DocumentosDesktop }
         "11" { Verificar-ServicosEssenciais }
         "12" { Scan-WindowsDefender }
-        "13" { Write-Log "Encerrando script."; exit }
+        "13" { Processos-Pesados }
+        "14" { Write-Log "Encerrando script."; exit }
         default { Write-Host "Opção inválida, tente novamente." }
     }
 
