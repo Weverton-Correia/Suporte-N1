@@ -1,173 +1,98 @@
-# Suporte-N1
+# 🖥️ Script Profissional de Suporte N1 com Logs
+
+![PowerShell](https://img.shields.io/badge/PowerShell-5%2B-blue?logo=powershell)
+![Status](https://img.shields.io/badge/Status-Ativo-brightgreen)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+
+> 🔧 Automação completa para **Suporte N1** no Windows, com logs organizados e funções essenciais para diagnóstico e manutenção.
+
+---
+
+## 📺 Demonstração Visual
+
+### Menu Interativo (simulação em ASCII)
+
+```text
+=========================================
+   Suporte N1 Profissional - Menu Interativo
+=========================================
+1. Limpar arquivos temporários
+2. Limpar cache do Power BI
+3. Limpar navegadores (Chrome, Edge, Firefox)
+4. Verificar integridade do Windows
+5. Testar conexão de rede
+6. Atualizar Windows
+7. Reiniciar máquina
+8. Relatório de hardware e software
+9. Resetar rede
+10. Backup rápido (zip) de Documentos e Desktop
+11. Verificar serviços essenciais
+12. Scan rápido Windows Defender
+13. Inventário de processos pesados
+14. Sair
+=========================================
+✨ Funcionalidades
+
+🧹 Limpeza de arquivos temporários
+
+📊 Limpeza de cache Power BI
+
+🌐 Limpeza de cache e histórico de navegadores (Chrome, Edge, Firefox)
+
+🛠️ Verificação de integridade do Windows (sfc /scannow)
+
+📡 Teste e diagnóstico de rede
+
+🔄 Reset de rede (release/renew + flush DNS)
+
+💾 Backup rápido e compactado de Documentos e Desktop
+
+🖥️ Relatório de hardware e software
+
+🧩 Verificação de serviços essenciais (Windows Update, Spooler, Firewall)
+
+🛡️ Scan rápido do Windows Defender
+
+📈 Inventário de processos pesados (CPU)
+
+🔁 Atualização do Windows via PSWindowsUpdate
+
+🖲️ Opção de reinício imediato da máquina
+
+📝 Geração de logs únicos por sessão em C:\SuporteN1_Logs
+
+📋 Pré-requisitos
+
+Windows 10 ou superior
+
+PowerShell 5.1+ ou PowerShell Core
+
+Permissões de administrador 👨‍💻
 
 
-# =============================================
-# Script Profissional de Suporte N1 com Logs
-# Autor: Weverton
-# =============================================
+🚀 Como usar
 
-# Criar diretório de logs
-$logDir = "C:\SuporteN1_Logs"
-if (-not (Test-Path $logDir)) { New-Item -Path $logDir -ItemType Directory }
+Clone este repositório:
 
-function Write-Log {
-    param (
-        [string]$mensagem,
-        [string]$arquivo="$logDir\Log_Geral_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    )
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $linha = "$timestamp - $mensagem"
-    Write-Host $linha
-    Add-Content -Path $arquivo -Value $linha
-}
+git clone https://github.com/SeuUsuario/SuporteN1.git
 
-function Limpar-Temporarios {
-    Write-Log "Iniciando limpeza de arquivos temporários..."
-    Remove-Item "$env:TEMP\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Log "Arquivos temporários removidos."
-}
 
-function Limpar-CachePowerBI {
-    Write-Log "Iniciando limpeza de cache do Power BI..."
-    Remove-Item "$env:LOCALAPPDATA\Microsoft\PowerBI\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Log "Cache do Power BI limpo."
-}
+Acesse a pasta do projeto:
 
-function Limpar-Navegadores {
-    Write-Log "Iniciando limpeza de navegadores..."
-    # Chrome
-    Remove-Item "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cache\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History" -Force -ErrorAction SilentlyContinue
-    # Edge
-    Remove-Item "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\Cache\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\History" -Force -ErrorAction SilentlyContinue
-    # Firefox
-    Remove-Item "$env:APPDATA\Mozilla\Firefox\Profiles\*\cache2\*" -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Log "Cache dos navegadores limpo."
-}
+cd SuporteN1
 
-function Verificar-IntegridadeWindows {
-    Write-Log "Iniciando verificação de integridade do Windows..."
-    $relatorio = sfc /scannow 2>&1
-    $arquivo = "$logDir\Verificacao_Integridade_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    $relatorio | Out-File $arquivo
-    Write-Log "Verificação de integridade concluída. Relatório salvo em $arquivo"
-}
 
-function Testar-ConexaoRede {
-    Write-Log "Iniciando teste de conexão de rede..."
-    $resultado = Test-Connection google.com -Count 4
-    $arquivo = "$logDir\Teste_Rede_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    $resultado | Out-File $arquivo
-    Write-Log "Teste de rede concluído. Relatório salvo em $arquivo"
-}
+Execute o script como Administrador:
 
-function Atualizar-Windows {
-    Write-Log "Verificando atualizações do Windows..."
-    if (-not (Get-Module -ListAvailable -Name PSWindowsUpdate)) {
-        Install-Module PSWindowsUpdate -Force -Scope CurrentUser
-    }
-    Import-Module PSWindowsUpdate
-    $relatorio = Get-WindowsUpdate -Install -AcceptAll -IgnoreReboot
-    $arquivo = "$logDir\Atualizacao_Windows_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    $relatorio | Out-File $arquivo
-    Write-Log "Atualização do Windows concluída. Relatório salvo em $arquivo"
-}
+.\SuporteN1.ps1
 
-function Reiniciar-Maquina {
-    Write-Log "Reiniciando máquina..."
-    Restart-Computer -Force
-}
+📂 Estrutura de Logs
 
-function Relatorio-HardwareSoftware {
-    Write-Log "Gerando relatório de hardware e software..."
-    $relatorio = Get-ComputerInfo | Select-Object CsName, WindowsVersion, OsArchitecture, CsTotalPhysicalMemory
-    $relatorio += Get-WmiObject Win32_Product | Select-Object Name, Version
-    $arquivo = "$logDir\Relatorio_HW_SW_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    $relatorio | Out-File $arquivo
-    Write-Log "Relatório de hardware e software salvo em $arquivo"
-}
+Todos os relatórios ficam em:
 
-function Reset-Rede {
-    Write-Log "Resetando rede (IP release/renew e flush DNS)..."
-    ipconfig /release
-    ipconfig /renew
-    ipconfig /flushdns
-    Write-Log "Rede resetada."
-}
-
-function Backup-DocumentosDesktop {
-    $destino = "C:\Backup_Rapido"
-    Write-Log "Iniciando backup de Documentos e Desktop em $destino..."
-    New-Item -Path $destino -ItemType Directory -Force | Out-Null
-    Copy-Item "$env:USERPROFILE\Documents\*" -Destination "$destino\Documents" -Recurse -Force -ErrorAction SilentlyContinue
-    Copy-Item "$env:USERPROFILE\Desktop\*" -Destination "$destino\Desktop" -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Log "Backup concluído."
-}
-
-function Verificar-ServicosEssenciais {
-    Write-Log "Verificando serviços essenciais..."
-    $servicos = @("wuauserv","Spooler","MpsSvc")
-    $arquivo = "$logDir\Servicos_Essenciais_$(Get-Date -Format yyyyMMdd_HHmmss).txt"
-    foreach ($s in $servicos) {
-        $status = Get-Service $s
-        $linha = "$($status.DisplayName) - Status: $($status.Status)"
-        Write-Host $linha
-        Add-Content -Path $arquivo -Value $linha
-    }
-    Write-Log "Verificação de serviços essenciais concluída. Relatório salvo em $arquivo"
-}
-
-function Scan-WindowsDefender {
-    Write-Log "Iniciando scan rápido do Windows Defender..."
-    Start-MpScan -ScanType QuickScan
-    Write-Log "Scan do Windows Defender concluído."
-}
-
-# Menu principal
-function Menu-N1 {
-    Clear-Host
-    Write-Host "========================================="
-    Write-Host "   Suporte N1 Profissional - Menu Interativo "
-    Write-Host "========================================="
-    Write-Host "1. Limpar arquivos temporários"
-    Write-Host "2. Limpar cache do Power BI"
-    Write-Host "3. Limpar navegadores (Chrome, Edge, Firefox)"
-    Write-Host "4. Verificar integridade do Windows"
-    Write-Host "5. Testar conexão de rede"
-    Write-Host "6. Atualizar Windows"
-    Write-Host "7. Reiniciar máquina"
-    Write-Host "8. Gerar relatório de hardware e software"
-    Write-Host "9. Resetar rede"
-    Write-Host "10. Backup rápido de Documentos e Desktop"
-    Write-Host "11. Verificar serviços essenciais"
-    Write-Host "12. Scan rápido Windows Defender"
-    Write-Host "13. Sair"
-    Write-Host "========================================="
-
-    $escolha = Read-Host "Escolha uma opção (1-13)"
-
-    switch ($escolha) {
-        "1" { Limpar-Temporarios }
-        "2" { Limpar-CachePowerBI }
-        "3" { Limpar-Navegadores }
-        "4" { Verificar-IntegridadeWindows }
-        "5" { Testar-ConexaoRede }
-        "6" { Atualizar-Windows }
-        "7" { Reiniciar-Maquina }
-        "8" { Relatorio-HardwareSoftware }
-        "9" { Reset-Rede }
-        "10" { Backup-DocumentosDesktop }
-        "11" { Verificar-ServicosEssenciais }
-        "12" { Scan-WindowsDefender }
-        "13" { Write-Log "Encerrando script."; exit }
-        default { Write-Host "Opção inválida, tente novamente." }
-    }
-
-    Write-Host "`nPressione qualquer tecla para voltar ao menu..."
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-    Menu-N1
-}
-
-# Inicia o menu
-Menu-N1
+C:\SuporteN1_Logs\
+│── Log_SuporteN1_20250914_103500.txt
+│── Verificacao_Integridade_20250914_103600.txt
+│── Teste_Rede_20250914_104200.txt
+│── Relatorio_HW_SW_20250914_104800.txt
+│── ...
